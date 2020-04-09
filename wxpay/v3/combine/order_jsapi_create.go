@@ -1,6 +1,6 @@
 package combine
 
-import "sdk-weixin/wxpay/v3"
+import v3 "sdk-weixin/wxpay/v3"
 
 /*
 文档： https://pay.weixin.qq.com/wiki/doc/apiv3/wxpay/pay/combine/chapter3_2.shtml
@@ -18,9 +18,9 @@ import "sdk-weixin/wxpay/v3"
 */
 
 // 合单下单-JS支付API
-func TransactionsJsapi(cfg v3.Config, params *JsapiQueryParams) (r *JsapiQueryResult, e error) {
-	//v3.RsaSignWithSha256()
-	return nil, nil
+func Jsapi(wx v3.Wxpay, params *JsapiQueryParams) (r *JsapiQueryResult, e error) {
+	e = wx.Call(v3.POST, "/v3/combine-transactions/jsapi", params, &r)
+	return
 }
 
 // 请求参数

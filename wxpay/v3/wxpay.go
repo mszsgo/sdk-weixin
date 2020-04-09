@@ -1,3 +1,4 @@
+// 微信支付API v3 SDK golang版本
 package v3
 
 import (
@@ -21,17 +22,24 @@ import (
 	"time"
 )
 
+const (
+	GET  = "GET"
+	POST = "POST"
+)
+
+type Wxpay struct {
+	cfg         *Config
+	wxpayConfig *WxpayConfig
+}
+
+func NowWxpay(c *Config) *Wxpay {
+	wx := &Wxpay{cfg: c}
+	wx.timerRefreshCertificates()
+	return wx
+}
+
 // 微信支付v3接口规则
 // 文档：https://wechatpay-api.gitbook.io/wechatpay-api-v3/
-
-type Protocol struct {
-	Cfg *Cfg
-}
-
-func NewProtocol(cfg *Cfg) *Protocol {
-	return &Protocol{Cfg: cfg}
-}
-
 // 为了保证安全性，微信支付在回调通知和平台证书下载接口中，对关键信息进行了AES-256-GCM加密。API v3密钥是加密时使用的对称密钥。
 
 // AES-256-GCM 加密
@@ -40,46 +48,50 @@ func NewProtocol(cfg *Cfg) *Protocol {
 }*/
 
 // AES-256-GCM 解密
-func (p *Protocol) Aes256GcmDecrypt(nonce, associatedData, ciphertext string) (string, error) {
-	block, err := aes.NewCipher([]byte(p.Cfg.WxV3Secret))
+func (p *Wxpay) Aes256GcmDecrypt(nonce, associatedData, ciphertext string) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(p.cfg.V3Secret))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	aesgcm, err := cipher.NewGCMWithNonceSize(block, len(nonce))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	cipherdata, err := base64.StdEncoding.DecodeString(ciphertext)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	plaindata, err := aesgcm.Open(nil, []byte(nonce), cipherdata, []byte(associatedData))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	log.Println("plaintext: ", string(plaindata))
-	return string(plaindata), err
+	log.Println("解密微信平台公钥证书plaintext: ", string(plaindata))
+	return plaindata, err
 }
 
 // 计算请求报文签名
-func (p *Protocol) Sign(method, path, body, timestamp, nonce_str string) (sign string, err error) {
+func (p *Wxpay) Sign(method, path, body, timestamp, nonce_str string) (sign string, err error) {
 	targetStr := method + "\n" + path + "\n" + timestamp + "\n" + nonce_str + "\n" + body + "\n"
 	log.Println("签名原始字符串：\n" + targetStr)
-	sign, err = RsaSignWithSha256(targetStr, p.Cfg.MerPrivateKey)
+	sign, err = RsaSignWithSha256(targetStr, p.cfg.MerPrivateKey)
 	log.Println("签名结果字符串：" + sign)
 	return
 }
 
 // 验签响应报文签名
-func (p *Protocol) Very(signature, serial, time, nonce, body string) (ok bool, err error) {
-	//验证证书序列号
-	ok, err = p.Cfg.WxpayPublicKeySeriaNo(serial)
-	if err != nil {
-		return false, err
+func (p *Wxpay) Very(signature, serial, time, nonce, body string) (ok bool, err error) {
+	if serial != p.wxpayConfig.wxpayPublicKeySeriaNo {
+		err = p.refreshCertificates()
+		if err != nil {
+			return false, err
+		}
+	}
+	if serial != p.wxpayConfig.wxpayPublicKeySeriaNo {
+		return false, errors.New("验签使用的证书编号与微信平台公钥证书编号不匹配")
 	}
 
 	checkStr := time + "\n" + nonce + "\n" + body + "\n"
-	blocks, _ := pem.Decode(p.Cfg.WxpayPublicKey())
+	blocks, _ := pem.Decode(p.wxpayConfig.wxpayPublicKey)
 	if blocks == nil || blocks.Type != "PUBLIC KEY" {
 		log.Println("failed to decode PUBLIC KEY")
 		return false, err
@@ -95,7 +107,7 @@ func (p *Protocol) Very(signature, serial, time, nonce, body string) (ok bool, e
 }
 
 // 拼接权限验证字符串
-func (p *Protocol) Authorization(method, path, body string) (authStr string, err error) {
+func (p *Wxpay) Authorization(method, path, body string) (authStr string, err error) {
 	authorization := "WECHATPAY2-SHA256-RSA2048" //固定字符串
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	nonce_str := strings.ReplaceAll(uuid.New().String(), "-", "")
@@ -103,16 +115,16 @@ func (p *Protocol) Authorization(method, path, body string) (authStr string, err
 	if err != nil {
 		return "", err
 	}
-	mchid := p.Cfg.Mchid
-	serial_no := p.Cfg.MchidSerialNo
+	mchid := p.cfg.Mchid
+	serial_no := p.cfg.MchidSerialNo
 	authorization = fmt.Sprintf(`%s mchid="%s",nonce_str="%s",signature="%s",timestamp="%s",serial_no="%s"`, authorization, mchid, nonce_str, signature, timestamp, serial_no)
 	return authorization, nil
 }
 
 //发送请求
-func (p *Protocol) Do(method, path, body string) (*http.Response, error) {
+func (p *Wxpay) Do(method, path, body string) (*http.Response, error) {
 	client := &http.Client{}
-	request, err := http.NewRequest(method, p.Cfg.ServiceUrl+path, strings.NewReader(body))
+	request, err := http.NewRequest(method, p.cfg.Url+path, strings.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +140,7 @@ func (p *Protocol) Do(method, path, body string) (*http.Response, error) {
 }
 
 //发送请求并验证签名
-func (p *Protocol) RequestVery(method, path string, i interface{}, o interface{}) error {
+func (p *Wxpay) Call(method, path string, i interface{}, o interface{}) error {
 	body := ""
 	if i != nil {
 		bytes, err := json.Marshal(i)
