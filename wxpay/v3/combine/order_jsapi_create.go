@@ -18,7 +18,7 @@ import v3 "sdk-weixin/wxpay/v3"
 */
 
 // 合单下单-JS支付API
-func Jsapi(wx v3.Wxpay, params *JsapiQueryParams) (r *JsapiQueryResult, e error) {
+func JsapiCreate(wx v3.Wxpay, params *JsapiQueryParams) (r *JsapiQueryResult, e error) {
 	e = wx.Call(v3.POST, "/v3/combine-transactions/jsapi", params, &r)
 	return
 }

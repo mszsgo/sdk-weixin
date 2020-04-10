@@ -38,6 +38,10 @@ func NowWxpay(c *Config) *Wxpay {
 	return wx
 }
 
+func (p *Wxpay) Cfg() *Config {
+	return p.cfg
+}
+
 // 微信支付v3接口规则
 // 文档：https://wechatpay-api.gitbook.io/wechatpay-api-v3/
 // 为了保证安全性，微信支付在回调通知和平台证书下载接口中，对关键信息进行了AES-256-GCM加密。API v3密钥是加密时使用的对称密钥。

@@ -8,7 +8,18 @@ import v3 "sdk-weixin/wxpay/v3"
 
 */
 
-func Close(wx v3.Wxpay, tradeNo string) (err error) {
-	err = wx.Call(v3.GET, "/v3/combine-transactions/out-trade-no/"+tradeNo, nil, nil)
+func Close(wx v3.Wxpay, combine_out_trade_no string, params *OrderCloseQueryParams) (err error) {
+	err = wx.Call(v3.GET, "/v3/combine-transactions/out-trade-no/"+combine_out_trade_no+"/close", &params, nil)
 	return
+}
+
+type OrderCloseQueryParams struct {
+	CombineAppid string                  `json:"combine_appid"`
+	SubOrders    []*SubOrdersCloseObject `json:"sub_orders"`
+}
+
+type SubOrdersCloseObject struct {
+	Mchid        string `json:"mchid"`
+	Out_trade_no string `json:"out_trade_no"`
+	Sub_mchid    string `json:"sub_mchid"`
 }
