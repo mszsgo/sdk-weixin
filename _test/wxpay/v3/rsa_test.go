@@ -1,6 +1,7 @@
 package v3
 
 import (
+	v3 "sdk-weixin/wxpay/v3"
 	"testing"
 )
 
@@ -60,12 +61,12 @@ BtTx/cm4T1+LV3LYjAtTpg==
 
 func TestRsaSignWithSha256(t *testing.T) {
 	s := "待加密字符串"
-	sign, err := RsaSignWithSha256(s, priKey)
+	sign, err := v3.RsaSignWithSha256(s, priKey)
 	if err != nil {
 		t.Log(err)
 	}
 	t.Log("计算签名：" + sign)
-	ok, err := RsaVeryWithSha256(s, sign, pubkey)
+	ok, err := v3.RsaVeryWithSha256(s, sign, pubkey)
 	if err != nil {
 		t.Error(err)
 	}

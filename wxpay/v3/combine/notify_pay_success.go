@@ -6,7 +6,7 @@ import (
 	v3 "sdk-weixin/wxpay/v3"
 )
 
-func NotifyPaySuccessHandle(wx v3.Wxpay, callback func(data *NotifyPaySuccessParams) error) http.Handler {
+func NotifyPaySuccessHandle(wx *v3.Wxpay, callback func(data *NotifyPaySuccessParams) error) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, r *http.Request) {
 		err := payNotify(wx, r.Body, func(data []byte) error {
 			var params *NotifyPaySuccessParams

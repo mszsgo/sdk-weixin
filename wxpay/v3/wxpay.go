@@ -69,7 +69,6 @@ func (p *Wxpay) Aes256GcmDecrypt(nonce, associatedData, ciphertext string) ([]by
 	if err != nil {
 		return nil, err
 	}
-	log.Println("解密微信平台公钥证书plaintext: ", string(plaindata))
 	return plaindata, err
 }
 
@@ -84,6 +83,9 @@ func (p *Wxpay) Sign(method, path, body, timestamp, nonce_str string) (sign stri
 
 // 验签响应报文签名
 func (p *Wxpay) Very(signature, serial, time, nonce, body string) (ok bool, err error) {
+	if serial == "" {
+		return false, errors.New("微信平台公钥证书序列号为空")
+	}
 	if serial != p.wxpayConfig.wxpayPublicKeySeriaNo {
 		err = p.refreshCertificates()
 		if err != nil {
@@ -169,7 +171,10 @@ func (p *Wxpay) Call(method, path string, i interface{}, o interface{}) error {
 	}
 	resBody := string(bytes)
 	log.Println("请求ID：" + requestId + "  响应报文：" + resBody)
-
+	log.Println("resp.StatusCode=" + strconv.Itoa(resp.StatusCode))
+	if resp.StatusCode != 200 && resp.StatusCode != 204 {
+		return errors.New("weixin http status " + resp.Status)
+	}
 	ok, err := p.Very(signature, serial, timestamp, nonce, resBody)
 	if err != nil {
 		return err

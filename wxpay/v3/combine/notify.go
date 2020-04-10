@@ -14,7 +14,7 @@ import (
 
 */
 
-func PayNotifyHandler(wx v3.Wxpay, callback func(data []byte) error) http.Handler {
+func PayNotifyHandler(wx *v3.Wxpay, callback func(data []byte) error) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, r *http.Request) {
 		err := payNotify(wx, r.Body, callback)
 		if err != nil {
@@ -27,7 +27,7 @@ func PayNotifyHandler(wx v3.Wxpay, callback func(data []byte) error) http.Handle
 	})
 }
 
-func payNotify(wx v3.Wxpay, body io.Reader, callback func(data []byte) error) (err error) {
+func payNotify(wx *v3.Wxpay, body io.Reader, callback func(data []byte) error) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = e.(error)

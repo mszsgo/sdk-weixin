@@ -3,4 +3,4 @@
 *.iml
 *.exe
 
-/wxpay/v3/wxpay.config.go
+_test/wxpay/v3/wxpay.config.go

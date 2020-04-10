@@ -8,7 +8,7 @@ import v3 "sdk-weixin/wxpay/v3"
 
 */
 
-func Query(wx v3.Wxpay, combine_out_trade_no string) (r *OrderQueryResult, err error) {
+func Query(wx *v3.Wxpay, combine_out_trade_no string) (r *OrderQueryResult, err error) {
 	err = wx.Call(v3.GET, "/v3/combine-transactions/out-trade-no/"+combine_out_trade_no, nil, &r)
 	return
 }

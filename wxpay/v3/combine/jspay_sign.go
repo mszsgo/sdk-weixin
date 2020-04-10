@@ -10,7 +10,7 @@ import (
 // JS调起支付API
 // 文档： https://pay.weixin.qq.com/wiki/doc/apiv3/wxpay/pay/combine/chapter3_6.shtml
 
-func JspaySign(wx v3.Wxpay, appId string, packageStr string) (*JspayParams, error) {
+func JspaySign(wx *v3.Wxpay, appId string, packageStr string) (*JspayParams, error) {
 	var r = &JspayParams{
 		AppId:     appId,
 		TimeStamp: string(time.Now().Unix()),
